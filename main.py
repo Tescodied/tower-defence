@@ -181,6 +181,9 @@ def load_levels(clock, player_level):
         except FileNotFoundError:
             continue
 
+    for level in levels[player_level:]:
+        level.set_alpha(100)
+
     bottom_level_bottom_ycor = original_levels_cors[7][1] + level_height
 
     changing_cors = [list(cors) for cors in original_levels_cors]
@@ -319,7 +322,7 @@ def load_levels(clock, player_level):
         pygame.display.flip()
         
 
-def play_level(bg, bg_col, clock):
+def play_level(bg_mask, bg, clock):
     alpha = 0
     bg.set_alpha(alpha)
     increment = 255 / FPS * 2
@@ -328,9 +331,7 @@ def play_level(bg, bg_col, clock):
 
     while done_time < FPS:
         clock.tick(FPS)
-        print(clock.get_fps())
 
-        win.blit(bg_col, (0,0))
         win.blit(bg, (0,0))
         
         if alpha < 255:
@@ -344,15 +345,46 @@ def play_level(bg, bg_col, clock):
 
         if check_quit():
             return False
-        
+
+    acceptable_dist_track = 5
+
+    tower_slots_height = 100
+    tower_slots = make_image("tower slots.png", (W, tower_slots_height))
+
+    tower_slots_xcor = 0
+    tower_slots_ycor = H - tower_slots_height
+
+
+
+    click_width = 100
+    click_height = 25
+    dropdown_click = make_image("dropdown click.png", (click_width, click_height))
+    click_mask = pygame.mask.from_surface(dropdown_click)
     
+    click_xcor = W / 2 - click_width / 2
+    click_ycor = tower_slots_ycor - click_height
+
     while True:
         clock.tick(FPS)
+        #print(clock.get_fps())
+
         mouse_xcor, mouse_ycor = pygame.mouse.get_pos()
 
-        win.blit(bg_col, (0,0))
         win.blit(bg, (0,0))
+        win.blit(tower_slots, (tower_slots_xcor, tower_slots_ycor))
+        win.blit(dropdown_click, (click_xcor, click_ycor))
+
+        if cursor_mask.overlap(click_mask, (click_xcor - mouse_xcor, click_ycor - mouse_ycor)):
+            dropdown_click.set_alpha(200)
+        else:
+            dropdown_click.set_alpha(255)
+
         win.blit(cursor, (mouse_xcor, mouse_ycor))
+
+        for dx in range(-acceptable_dist_track, acceptable_dist_track + 1):
+            for dy in range(-acceptable_dist_track, acceptable_dist_track + 1):
+                if cursor_mask.overlap(bg_mask, (-mouse_xcor + dx, -mouse_ycor + dy)): #NEEDS CHANGE FOR WHEN DRAGGING TOWER +W/2 +H/2 TO OFFSET
+                    pass
 
         pygame.display.flip()
 
@@ -365,8 +397,8 @@ def main():
     level = 1
 
     levels_made = 1
-    levels_bgs = [make_image(f"level {i  + 1} map.png", (W, H)) for i in range(levels_made)]
-    bg_bg_levels = [make_image(f"bg{i + 1} background.png", (W,H)) for i in range(levels_made)]
+    levels_bgs = [pygame.mask.from_surface(make_image(f"level {i  + 1} mask.png", (W, H))) for i in range(levels_made)]
+    bg_levels = [make_image(f"bg{i + 1} background.png", (W,H)) for i in range(levels_made)]
     
     run = launch_screen(clock)
     pygame.mouse.set_visible(False)
@@ -390,7 +422,7 @@ def main():
                 setup = False
         
         if run:
-            game_playing = play_level(levels_bgs[0], bg_bg_levels[0], clock)
+            game_playing = play_level(levels_bgs[0], bg_levels[0], clock)
             if not game_playing:
                 run = False
                 break
